@@ -6,11 +6,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
-  res.setHeader("Content-Security-Policy", "frame-ancestors *");
-  res.setHeader("X-Frame-Options", "ALLOWALL");
+  const shop = req.query.shop || '';
+  if (shop) {
+    res.setHeader("Content-Security-Policy", `frame-ancestors https://${shop} https://admin.shopify.com`);
+  } else {
+    res.setHeader("Content-Security-Policy", "frame-ancestors https://admin.shopify.com");
+  }
   next();
 });
-
 const PORT = process.env.PORT || 3000;
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY || '';
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || '';
