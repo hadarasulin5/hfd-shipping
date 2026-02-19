@@ -5,6 +5,11 @@ import crypto from 'crypto';
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "frame-ancestors *");
+  res.setHeader("X-Frame-Options", "ALLOWALL");
+  next();
+});
 
 const PORT = process.env.PORT || 3000;
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY || '';
