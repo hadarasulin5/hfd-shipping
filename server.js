@@ -10,7 +10,7 @@ app.use((req, res, next) => {
   if (shop) {
     res.setHeader("Content-Security-Policy", `frame-ancestors https://${shop} https://admin.shopify.com`);
   } else {
-    res.setHeader("Content-Security-Policy", "frame-ancestors https://admin.shopify.com");
+    res.setHeader("Content-Security-Policy", "frame-ancestors https://${shop} https://admin.shopify.com https://accounts.shopify.com");
   }
   next();
 });
