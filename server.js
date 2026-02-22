@@ -125,6 +125,7 @@ app.get('/send_to_hfd', async (req, res) => {
       });
       const data = await r.json();
       order = data.order;
+      console.log('Order fetch result:', JSON.stringify(data).substring(0, 200));
     } catch(e) {
       errorMsg = e.message;
     }
