@@ -12,6 +12,8 @@ const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || '';
 const APP_URL = process.env.APP_URL || 'https://hfd-shipping.onrender.com';
 
 const tokenStore = {};
+const DEFAULT_HFD_TOKEN = process.env.HFD_TOKEN || '';
+const DEFAULT_HFD_CLIENT_ID = process.env.HFD_CLIENT_ID || '';
 if (process.env.SHOPIFY_TOKEN) {
   tokenStore['xn-vldscdfsea5ah3ae6j.myshopify.com'] = process.env.SHOPIFY_TOKEN;
 }
@@ -112,7 +114,7 @@ app.post('/save-settings', (req, res) => {
 // ===== דף שליחה ל-HFD (נפתח מתוך הזמנה) =====
 app.get('/send_to_hfd', async (req, res) => {
   const { id, shop } = req.query;
-  const settings = settingsStore[shop] || {};
+  const settings = settingsStore[shop] || { hfd_token: DEFAULT_HFD_TOKEN, client_id: DEFAULT_HFD_CLIENT_ID };
   const accessToken = tokenStore[shop];
 
   let order = null;
