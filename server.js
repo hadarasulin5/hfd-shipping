@@ -43,6 +43,7 @@ app.get('/auth/callback', async (req, res) => {
     try { data = JSON.parse(text); } catch(e) { return res.status(500).send('Parse error: ' + text.substring(0, 200)); }
     if (data.access_token) {
       tokenStore[shop] = data.access_token;
+      console.log('SHOPIFY_TOKEN:', shop, data.access_token);
       res.redirect(`/?shop=${shop}`);
     } else {
       res.status(500).send('No token: ' + JSON.stringify(data));
