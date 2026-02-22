@@ -37,11 +37,25 @@ app.get('/auth/callback', async (req, res) => {
     const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: SHOPIFY_API_KEY, client_secret: SHOPIFY_API_SECRET, code }),
+      body: JSON.stringify({ 
+        client_id: SHOPIFY_API_KEY, 
+        client_secret: SHOPIFY_API_SECRET, 
+        code 
+      }),
     });
-    const data = await response.json();
-    tokenStore[shop] = data.access_token;
-    res.redirect(`/?shop=${shop}`);
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      return res.status(500).send('Parse error: ' + text.substring(0, 200));
+    }
+    if (data.access_token) {
+      tokenStore[shop] = data.access_token;
+      res.redirect(`/?shop=${shop}`);
+    } else {
+      res.status(500).send('No token received: ' + JSON.stringify(data));
+    }
   } catch (err) {
     res.status(500).send('Authentication failed: ' + err.message);
   }
