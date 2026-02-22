@@ -278,20 +278,50 @@ app.post('/create-shipment', async (req, res) => {
     sub_payment: "",
   };
 
-  try {
-    console.log('HFD token used:', hfd_token ? hfd_token.substring(0,20) : 'EMPTY');
-console.log('HFD client_id:', client_id);
-    const response = await fetch('https://ws2.hfd.co.il/rest/v2/parcels', {
-      method: 'POST',headers: { 
-  'Content-Type': 'application/json', 
-  'Authorization': `Bearer ${hfd_token}`, 
-  'Accept': 'application/json',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Origin': 'https://ws2.hfd.co.il',
-  'Referer': 'https://ws2.hfd.co.il/'
-},
-      body: JSON.stringify(payload),
+  // שולח מהדפדפן ישירות ל-HFD
+  res.send(`<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>שולח משלוח...</title>
+  <style>
+    body{font-family:Arial;max-width:600px;margin:80px auto;text-align:center;}
+    .success{color:green;font-size:22px;}
+    .error{color:red;font-size:18px;}
+    a{color:#2c6fad;}
+    #status{margin:20px 0;}
+  </style>
+</head>
+<body>
+  <div id="status">⏳ שולח משלוח ל-HFD...</div>
+  <script>
+    const payload = ${JSON.stringify(payload)};
+    const token = ${JSON.stringify(hfd_token)};
+    
+    fetch('https://ws2.hfd.co.il/rest/v2/parcels', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.id || data.parcel_id) {
+        document.getElementById('status').innerHTML = '<div class="success">✅ המשלוח נפתח בהצלחה!</div><p>מספר משלוח: <strong>' + (data.id || data.parcel_id) + '</strong></p><a href="javascript:window.close()">סגור</a>';
+      } else {
+        document.getElementById('status').innerHTML = '<div class="error">❌ שגיאה: ' + JSON.stringify(data) + '</div><a href="javascript:history.back()">חזרה</a>';
+      }
+    })
+    .catch(err => {
+      document.getElementById('status').innerHTML = '<div class="error">❌ שגיאה: ' + err.message + '</div><a href="javascript:history.back()">חזרה</a>';
     });
+  </script>
+</body>
+</html>`);
+});
     const text = await response.text();
 console.log('HFD response:', text.substring(0, 300));
 let data;
