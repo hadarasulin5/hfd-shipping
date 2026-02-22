@@ -282,8 +282,14 @@ app.post('/create-shipment', async (req, res) => {
     console.log('HFD token used:', hfd_token ? hfd_token.substring(0,20) : 'EMPTY');
 console.log('HFD client_id:', client_id);
     const response = await fetch('https://ws2.hfd.co.il/rest/v2/parcels', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${hfd_token}`, 'Accept': 'application/json' },
+      method: 'POST',headers: { 
+  'Content-Type': 'application/json', 
+  'Authorization': `Bearer ${hfd_token}`, 
+  'Accept': 'application/json',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Origin': 'https://ws2.hfd.co.il',
+  'Referer': 'https://ws2.hfd.co.il/'
+},
       body: JSON.stringify(payload),
     });
     const text = await response.text();
