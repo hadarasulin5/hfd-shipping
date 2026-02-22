@@ -15,6 +15,7 @@ const tokenStore = {};
 if (process.env.SHOPIFY_TOKEN) {
   tokenStore['xn-vldscdfsea5ah3ae6j.myshopify.com'] = process.env.SHOPIFY_TOKEN;
 }
+console.log('Token loaded:', !!process.env.SHOPIFY_TOKEN);
 const settingsStore = {};
 
 // ===== CSP Headers =====
