@@ -322,19 +322,7 @@ app.post('/create-shipment', async (req, res) => {
 </body>
 </html>`);
 });
-    const text = await response.text();
-console.log('HFD response:', text.substring(0, 300));
-let data;
-try { data = JSON.parse(text); } catch(e) { data = { error: text }; }
-    if (response.ok) {
-      res.send(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><style>body{font-family:Arial;max-width:600px;margin:80px auto;text-align:center;}.success{color:green;font-size:22px;}a{color:#2c6fad;}</style></head><body><div class="success">✅ המשלוח נפתח בהצלחה!</div><p>מספר משלוח: <strong>${data.id || data.parcel_id || JSON.stringify(data)}</strong></p><a href="javascript:window.close()">סגור חלון</a></body></html>`);
-    } else {
-      res.send(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><style>body{font-family:Arial;max-width:600px;margin:80px auto;text-align:center;}.error{color:red;}a{color:#2c6fad;}</style></head><body><div class="error">❌ שגיאה: ${JSON.stringify(data)}</div><a href="javascript:history.back()">חזרה</a></body></html>`);
-    }
-  } catch (err) {
-    res.send(`<p style="color:red">שגיאה: ${err.message}</p>`);
-  }
-});
+;
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
