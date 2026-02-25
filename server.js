@@ -12,12 +12,6 @@ const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || '';
 const APP_URL = process.env.APP_URL || 'https://hfd-shipping.onrender.com';
 
 const tokenStore = {};
-const DEFAULT_HFD_TOKEN = process.env.HFD_TOKEN || '';
-const DEFAULT_HFD_CLIENT_ID = process.env.HFD_CLIENT_ID || '';
-if (process.env.SHOPIFY_TOKEN) {
-  tokenStore['xn-vldscdfsea5ah3ae6j.myshopify.com'] = process.env.SHOPIFY_TOKEN;
-}
-console.log('Token loaded:', !!process.env.SHOPIFY_TOKEN);
 const settingsStore = {};
 
 // ===== CSP Headers =====
@@ -49,7 +43,6 @@ app.get('/auth/callback', async (req, res) => {
     try { data = JSON.parse(text); } catch(e) { return res.status(500).send('Parse error: ' + text.substring(0, 200)); }
     if (data.access_token) {
       tokenStore[shop] = data.access_token;
-      console.log('SHOPIFY_TOKEN:', shop, data.access_token);
       res.redirect(`/?shop=${shop}`);
     } else {
       res.status(500).send('No token: ' + JSON.stringify(data));
@@ -114,7 +107,7 @@ app.post('/save-settings', (req, res) => {
 // ===== דף שליחה ל-HFD (נפתח מתוך הזמנה) =====
 app.get('/send_to_hfd', async (req, res) => {
   const { id, shop } = req.query;
-  const settings = settingsStore[shop] || { hfd_token: DEFAULT_HFD_TOKEN, client_id: DEFAULT_HFD_CLIENT_ID };
+  const settings = settingsStore[shop] || {};
   const accessToken = tokenStore[shop];
 
   let order = null;
@@ -127,7 +120,6 @@ app.get('/send_to_hfd', async (req, res) => {
       });
       const data = await r.json();
       order = data.order;
-      console.log('Order fetch result:', JSON.stringify(data).substring(0, 200));
     } catch(e) {
       errorMsg = e.message;
     }
@@ -181,6 +173,7 @@ app.get('/send_to_hfd', async (req, res) => {
     <input type="hidden" name="hfd_token" value="${settings.hfd_token || ''}">
     <input type="hidden" name="client_id" value="${settings.client_id || ''}">
     <input type="hidden" name="order_id" value="${id}">
+    <input type="hidden" name="order_number" value="${orderNumber}">
 
     <div class="card">
       <h2>סוג משלוח</h2>
@@ -244,85 +237,76 @@ app.get('/send_to_hfd', async (req, res) => {
 app.post('/create-shipment', async (req, res) => {
   const { shop, hfd_token, client_id, receiver_name, receiver_phone, receiver_email,
     receiver_address, receiver_city, receiver_building, receiver_appartment,
-    shipment_comments, shipment_type, pickup_point } = req.body;
+    shipment_comments, shipment_type, pickup_point, order_number } = req.body;
 
-  const today = new Date();
-  const execution_date = today.toISOString().slice(0,10).replace(/-/g,'');
-  const execution_time = today.toTimeString().slice(0,8).replace(/:/g,'');
   const isPickup = shipment_type === 'pickup';
 
+  // פיצול כתובת לרחוב ומספר בניין
+  const streetParts = (receiver_address || '').match(/^(.*?)\s+(\d+\w*)$/) || [];
+  const streetName = streetParts[1] || receiver_address || '';
+  const houseNum = streetParts[2] || receiver_building || '';
+
   const payload = {
-    action_type: "סגירה",
-    cargo_type_id_delivery: isPickup ? 11 : 10,
-    client_id: parseInt(client_id),
-    client_name: "",
-    client_order_number: "",
-    execution_date, execution_time,
-    govina: [], hadpes: true, id_2: "", ovala: "חבילה",
-    packages_qty_away: 1,
-    receiver_appartment: receiver_appartment || "",
-    receiver_building: receiver_building || "",
-    receiver_city_id: 5000,
-    receiver_comments: "", receiver_email: receiver_email || "",
-    receiver_entrance: "", receiver_floor: "",
-    receiver_name, receiver_phone,
-    receiver_street_id: "404",
-    return_to_shipments_page: false, save_add: false,
-    sender_appartment: "", sender_building: "",
-    sender_city_id: 5000, sender_comments: "", sender_email: "",
-    sender_entrance: "", sender_floor: "",
-    sender_name: "", sender_phone: "",
-    sender_street_id: "404",
-    shipment_comments: shipment_comments || "",
-    shipment_type_id: isPickup ? 36 : 35,
-    sub_payment: "",
+    clientNumber: parseInt(client_id),
+    mesiralsuf: "מסירה",
+    shipmentTypeCode: isPickup ? 36 : 35,
+    stageCode: 5,
+    ordererName: "חרוזים",
+    cargoTypeHaloch: 10,
+    cargoTypeHazor: 0,
+    packsHaloch: "1",
+    packsHazor: 0,
+    nameTo: receiver_name,
+    cityCode: "",
+    cityName: receiver_city || "",
+    streetCode: "",
+    streetName: streetName,
+    houseNum: houseNum,
+    entrance: "",
+    floor: "",
+    apartment: receiver_appartment || "",
+    telFirst: receiver_phone,
+    telSecond: "",
+    addressRemarks: "",
+    shipmentRemarks: shipment_comments || "",
+    referenceNum1: order_number || "",
+    referenceNum2: "",
+    futureDate: "",
+    futureTime: "",
+    pudoCodeOrigin: 0,
+    pudoCodeDestination: isPickup ? parseInt(pickup_point) || 0 : 0,
+    autoBindPudo: isPickup ? "N" : "N",
+    email: receiver_email || "",
+    productsPrice: 0,
+    productPriceCurrency: "",
+    shipmentWeight: 0,
+    govina: { code: 0, sum: 0, date: "", remarks: "" }
   };
 
-  // שולח מהדפדפן ישירות ל-HFD
-  res.send(`<!DOCTYPE html>
-<html dir="rtl" lang="he">
-<head>
-  <meta charset="UTF-8">
-  <title>שולח משלוח...</title>
-  <style>
-    body{font-family:Arial;max-width:600px;margin:80px auto;text-align:center;}
-    .success{color:green;font-size:22px;}
-    .error{color:red;font-size:18px;}
-    a{color:#2c6fad;}
-    #status{margin:20px 0;}
-  </style>
-</head>
-<body>
-  <div id="status">⏳ שולח משלוח ל-HFD...</div>
-  <script>
-    const payload = ${JSON.stringify(payload)};
-    const token = ${JSON.stringify(hfd_token)};
-    
-    fetch('https://ws2.hfd.co.il/rest/v2/parcels', {
+  try {
+    const response = await fetch('https://api.hfd.co.il/rest/v2/shipments/create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
+        'Authorization': `Bearer ${hfd_token}`,
         'Accept': 'application/json'
       },
-      body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.id || data.parcel_id) {
-        document.getElementById('status').innerHTML = '<div class="success">✅ המשלוח נפתח בהצלחה!</div><p>מספר משלוח: <strong>' + (data.id || data.parcel_id) + '</strong></p><a href="javascript:window.close()">סגור</a>';
-      } else {
-        document.getElementById('status').innerHTML = '<div class="error">❌ שגיאה: ' + JSON.stringify(data) + '</div><a href="javascript:history.back()">חזרה</a>';
-      }
-    })
-    .catch(err => {
-      document.getElementById('status').innerHTML = '<div class="error">❌ שגיאה: ' + err.message + '</div><a href="javascript:history.back()">חזרה</a>';
+      body: JSON.stringify(payload),
     });
-  </script>
-</body>
-</html>`);
+    const text = await response.text();
+    console.log('HFD response:', text.substring(0, 500));
+    let data;
+    try { data = JSON.parse(text); } catch(e) { data = { error: text }; }
+
+    if (data.shipmentNumber) {
+      res.send(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><style>body{font-family:Arial;max-width:600px;margin:80px auto;text-align:center;}.success{color:green;font-size:22px;}a{color:#2c6fad;}</style></head><body><div class="success">✅ המשלוח נפתח בהצלחה!</div><p>מספר משלוח: <strong>${data.shipmentNumber}</strong></p><a href="javascript:window.close()">סגור חלון</a></body></html>`);
+    } else {
+      res.send(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><style>body{font-family:Arial;max-width:600px;margin:80px auto;text-align:center;}.error{color:red;}a{color:#2c6fad;}</style></head><body><div class="error">❌ שגיאה: ${JSON.stringify(data)}</div><a href="javascript:history.back()">חזרה</a></body></html>`);
+    }
+  } catch (err) {
+    res.send(`<p style="color:red">שגיאה: ${err.message}</p>`);
+  }
 });
-;
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
